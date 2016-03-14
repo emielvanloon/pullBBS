@@ -1,7 +1,7 @@
 Package: pullBBS
 Type: Package
 Title: Download North American Breeding Bird Survey data
-Version: 0.2
+Version: 0.9.1
 Date: 2016-02-01
 Author: James Campbell
 Maintainer: James Campbell <jamesadamcampbell@gmail.com>

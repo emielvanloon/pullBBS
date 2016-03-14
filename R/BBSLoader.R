@@ -3,48 +3,64 @@
 #' This will automatically download all the BBS data from the FTP server.  Only those routes within your specified regions and sightings from your specified species will be saved in the output data.frame.  This function will also use the weather data from the BBS server to create missing absence records for routes in which your species was not observed.
 #'
 #' @param year A vector containing a list of the years for the surveys
-#' @param country A BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.
+#' @param country A vector containing BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.
 #' @param region A BBS region code representing a country or state.  Use the function pullBBSmeta to get a list of country and region codes.  Can be in the form of a list for selecting multiple regions.
 #' @param AOU AOU species code.  Use pullBBS meta to get a species list with codes.
-#' @param ignoreCache Set to TRUE to overwrite previously downloaded data.  This is usefull if a prevously cached file has been corrupted due to a download error..
+#' @param useCache When set to TRUE, downloaded data will not be erased after the function is complete.  In subsequent runs, data will be loaded taken from the cache instead of being downloaded.  This is usefull if you are running the function multiple times in a session and you don't want to redownload the BBS data on each run.
 #' @return A data.frame containing all the selected routes and observations for the specified species.
 #' @export
 
-pullBBS<- function(year,country,region,AOU,ignoreCache = F){
+pullBBS<- function(year,country,region,AOU,useCache = F){
+
+  ## Check that only a single contry code was entered
+  if(length(country) > 1){
+    message('You may only enter a single country code.  Exiting function...')
+    return()
+  }
 
   ## Pull location info for each route (filtered by country and region)
-  routeInfo <- pullBBSRouteLocations(country = country,region = region)
+  routeInfo <- pullBBSRouteLocations(country = country,region = region,useCache = useCache)
 
   ## Pull observation data
-  routes <- pullBBSObservations(year = year,country = country,region = region,AOU = AOU)
+  routes <- pullBBSObservations(year = year,country = country,region = region,AOU = AOU,useCache = useCache)
   summary(routes)
 
   message('Get missing absence data')
   ## Add missing absence data
-  routes.Meta <- pullBBSRouteData(year = year,country = country,region = region)
+  routes.Meta <- pullBBSRouteData(year = year,country = country,region = region,useCache = useCache)
 
-  ## Create unique keys for the routes and routes.Meta tables for comparing records
-  routes.sample <- paste(routes$year,routes$countrynum,routes$statenum,routes$Route,sep = '-')
-  routes.Meta.sample <- paste(routes.Meta$Year,routes.Meta$countrynum,routes.Meta$statenum,routes.Meta$Route,sep = '-')
+  ## Loop through each species code to add absence data
+  for(i in AOU){
+    ## Subset observations for current species
+    routes.species <- subset(routes,AOU == i)
 
-  ## Find which sample points are not included in routes data.frame
-  idx <- which(!routes.Meta.sample %in% routes.sample)
+    ## Create unique keys for the routes and routes.Meta tables for comparing records
+    routes.sample <- paste(routes.species$year,routes.species$countrynum,routes.species$statenum,routes.species$Route,sep = '-')
+    routes.Meta.sample <- paste(routes.Meta$Year,routes.Meta$countrynum,routes.Meta$statenum,routes.Meta$Route,sep = '-')
 
-  ## Prepare data.frame containing missing route info and null values
-  temp <- routes.Meta[idx,c('RouteDataId','countrynum','statenum','Route','RPID','Year')]
-  temp.stops <- cbind(AOU,matrix(data = 0,nrow = length(temp$RouteDataId),ncol = 50))
-  temp.append <- cbind(temp,temp.stops)
-  ## Update names to temp data.frame
-  names(temp.append) <- names(routes)
+    ## Find which year-routes are not included in routes data.frame
+    idx <- which(!routes.Meta.sample %in% routes.sample)
 
-  ## Append the correctly formatted missing absence data
-  routes.appended <- rbind(routes,temp.append)
+    ## Prepare data.frame containing missing route info and absence values
+    temp <- routes.Meta[idx,c('RouteDataId','countrynum','statenum','Route','RPID','Year')]
+    temp.stops <- cbind(i,matrix(data = 0,nrow = length(temp$RouteDataId),ncol = 50))
+    temp.append <- cbind(temp,temp.stops)
+    names(temp.append) <- names(routes)
 
-  ## Double check the the resulting table has the correct number of rows
-  nrow(routes.appended) == nrow(routes.Meta)
+    ## Append the correctly formatted missing absence data
+    if(i == AOU[1]){
+      routes.appended <- rbind(routes,temp.append)
+    }else{
+      routes.appended <- rbind(routes.appended,temp.append)
+    }
 
-  ## Clear old variables from memory
-  rm(routes.sample,routes.Meta.sample,idx,temp,temp.stops,temp.append,routes)
+    ## Clear old variables from memory
+    rm(routes.sample,routes.Meta.sample,idx,temp,temp.stops,temp.append)
+  }
+  rm(routes)
+
+  ## Double check the the resulting table has the correct number of rows (Compare observation data to meta data)
+  message('Row number check: ',nrow(routes.appended) == nrow(routes.Meta)*length(AOU))
 
   message('Append covariates from sampling instances (weather, noise, etc...)')
   ## Append covariate info from sampling round
@@ -82,7 +98,7 @@ pullBBS<- function(year,country,region,AOU,ignoreCache = F){
   return(routes.appended.3)
 }
 
-pullBBSObservations <- function(year,country,region,AOU,ignoreCache = F){
+pullBBSObservations <- function(year,country,region,AOU,useCache = F){
   require(RCurl)
 
   ### Set parameters
@@ -102,7 +118,7 @@ pullBBSObservations <- function(year,country,region,AOU,ignoreCache = F){
   ### Loop through files on server
   for(i in seq(from = 1,by = 1, to = length(filenames))){
     ### Download and unzip data
-    if(file.exists(paste0(tempdirectory,'/',filenames[i])) == F | ignoreCache == T){
+    if(file.exists(paste0(tempdirectory,'/',filenames[i])) == F | useCache == F){
       download.file(paste0(ftp,filenames[i]),destfile = paste0(tempdirectory,'/',filenames[i]))
     }
     message(paste0('Unzipping...(',filenames[i],')'))
@@ -131,6 +147,15 @@ pullBBSObservations <- function(year,country,region,AOU,ignoreCache = F){
     results <- rbind(temp[idx,],results)
   }
   message('Pull complete!!!')
+
+  ## Delete temporary files
+  if(useCache == F){
+    unlink(tempdirectory,recursive = T)
+    message('Temporary files deleted.')
+  }else{
+    message('Temporary files stored in cache (',tempdirectory,').')
+  }
+
   return(results)
 }
 
@@ -142,7 +167,7 @@ pullBBSObservations <- function(year,country,region,AOU,ignoreCache = F){
 #' @return A data.frame containing all the selected routes and their lat/long coordinates.
 #' @export
 
-pullBBSRouteLocations <- function(country,region,ignoreCache = F){
+pullBBSRouteLocations <- function(country,region,useCache = F){
   require(RCurl)
 
   ## Set parameters
@@ -156,7 +181,7 @@ pullBBSRouteLocations <- function(country,region,ignoreCache = F){
   }
 
   ## Download and unzip data
-  if(file.exists(paste0(tempdirectory,'/',file)) == F | ignoreCache == T){
+  if(file.exists(paste0(tempdirectory,'/',file)) == F | useCache == F){
     download.file(paste0(ftp,file),destfile = paste0(tempdirectory,'/',file))
   }
   message('Unzipping...')
@@ -179,12 +204,20 @@ pullBBSRouteLocations <- function(country,region,ignoreCache = F){
 
   message(paste0(length(idx),' matching records saved...'))
   results <- rbind(temp[idx,],results)
-
   message('Pull complete!!!')
+
+  ## Delete temporary files
+  if(useCache == F){
+    unlink(tempdirectory,recursive = T)
+    message('Temporary files deleted.')
+  }else{
+    message('Temporary files stored in cache (',tempdirectory,').')
+  }
+
   return(results)
 }
 
-pullBBSRouteData <- function(year,country,region,ignoreCache = F){
+pullBBSRouteData <- function(year,country,region,useCache = F){
   require(RCurl)
 
   ### Set parameters
@@ -198,7 +231,7 @@ pullBBSRouteData <- function(year,country,region,ignoreCache = F){
   }
 
   ### Download and unzip data
-  if(file.exists(paste0(tempdirectory,'/',file)) == F | ignoreCache == T){
+  if(file.exists(paste0(tempdirectory,'/',file)) == F | useCache == F){
     download.file(paste0(ftp,file),destfile = paste0(tempdirectory,'/',file))
   }
   message('Unzipping...')
@@ -222,8 +255,15 @@ pullBBSRouteData <- function(year,country,region,ignoreCache = F){
     message(paste0(length(idx),' matching records saved...'))
     results <- rbind(temp[idx,],results)
   }
-
   message('Pull complete!!!')
+
+  ## Delete temporary files
+  if(useCache == F){
+    unlink(tempdirectory,recursive = T)
+    message('Temporary files deleted.')
+  }else{
+    message('Temporary files stored in cache (',tempdirectory,').')
+  }
   return(results)
 }
 

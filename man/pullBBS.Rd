@@ -4,7 +4,7 @@
 \alias{pullBBS}
 \title{Pull data from the North American Breeding Bird Survey ftp server}
 \usage{
-pullBBS(year, country, region, AOU, ignoreCache = F)
+pullBBS(year, country, region, AOU, useCache = F)
 }
 \arguments{
 \item{year}{A vector containing a list of the years for the surveys}
@@ -15,7 +15,7 @@ pullBBS(year, country, region, AOU, ignoreCache = F)
 
 \item{AOU}{AOU species code.  Use pullBBS meta to get a species list with codes.}
 
-\item{ignoreCache}{Set to TRUE to overwrite previously downloaded data.  This is usefull if a prevously cached file has been corrupted due to a download error..}
+\item{useCache}{When set to TRUE, downloaded cached data will not be erased after the function is complete and in subsequent runs, data will be loaded taken from the cache instead of being downloaded.  This is usefull if you are running the function multiple times in a session and you don't want to redownload the BBS data on each run.}
 }
 \value{
 A data.frame containing all the selected routes and observations for the specified species.

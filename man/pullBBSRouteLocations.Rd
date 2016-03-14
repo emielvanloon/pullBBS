@@ -4,7 +4,7 @@
 \alias{pullBBSRouteLocations}
 \title{Pull data from the North American Breeding Bird Survey ftp server}
 \usage{
-pullBBSRouteLocations(country, region, ignoreCache = F)
+pullBBSRouteLocations(country, region, useCache = F)
 }
 \arguments{
 \item{country}{A BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.}

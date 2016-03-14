@@ -1,42 +1,12 @@
----
-title: "Example workflow"
-author: "James Campbell"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Example workflow}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-The following example will show you the typical workflow for downloading data from the North American Breeding Bird Survey ftp server.  First, we'll need to fingure out the relevant codes for our species and regions of interest.  In the following example, we'll download all overbird sightings in Alberta and Saskatchewan for the years 2011-2012.
-
-### Pull North American Breeding Bird Survey data
-
-Lets start by pulling the meta data to get the codes.  The `pullBBSmeta` function will create a folder in the current directory in which it'll save all the meta files.
-
-```{r,message=FALSE}
+## ----message=FALSE-------------------------------------------------------
 require(pullBBS)
 pullBBSmeta()
-```
 
-Check the file `BBS_Meta\RegionCodes.txt` and `BBS_Meta\SpeciesList.txt` to find the codes you need.  From browsing the files, we found these codes for our regions and species:
-
-- Ovenbird: **06740**
-- Tennasee Warbler: **06470**
-- Canada: **124**
-- Alberta & Saskatchewan: **04** & **79**
-
-Next, we'll use this to pull all the route info from the ftp server.
-
-```{r,message=FALSE}
+## ----message=FALSE-------------------------------------------------------
 routes <- pullBBS(year = c(2011,2012,2013),country = c(124),region = c(04,79),
                   AOU = c(06740))
-```
 
-As seen above, the BBS data is in a wide format, with each of the 50 stops holding a column in the table reporting the number of observations for that stop on a particular route.  To make the data easier to handle in R, we can condense the 50 stop columns into 2 columns: `Stop` and `Observations`.  The function `WideToLongBBS` will take care of this for us.
-
-```{r}
+## ------------------------------------------------------------------------
 routes.long <- WideToLongBBS(routes = routes)
 str(routes.long)
 
@@ -49,13 +19,8 @@ length(subset(temp2,AOU == 6740)[,1])
 hist(temp$Route)
 
 
-```
 
-### Plot the averaged observed stop density
-
-Now we can plot our BBS route locations in `leaflet`.  Here we'll plot the average number of Overbird sightings per stop on each route in addition to the number of years in which that route was sampled.  Each route in the BBS has a unique lat/long coordinate, and within each site there are 50 stops where the observer counts all audible species.  The resulting `mean observed density` is the average density from all the stops along a given route over all the surveyed years in the data set.  Ideally, each route is sampled once per year but many sites cannot be reaced on a yearly basis.
-
-```{r,fig.width=7,fig.height=5}
+## ----fig.width=7,fig.height=5--------------------------------------------
 ## Load packages for GIS
 require(leaflet)
 require(sp)
@@ -97,15 +62,8 @@ leaflet() %>% addTiles() %>%
   addLegend(position = 'topright',values = route.mean.spdf@data$years,pal = pal.2,
                    title = 'Survey Years') %>%
   addLayersControl(baseGroups = c("Observations", "Sample Years"))
-```
 
-### Compare our dataset to a relational database query
-
-To verify our dataset, we'll compare some summary statistics from our data set `routes.long` to the resulting statistics from a query in Microsoft Access 2010.
-
-Here's the summaries for the data pulled from our package `pullBBS`:
-
-```{r}
+## ------------------------------------------------------------------------
 message('Total number of routes: ',nrow(unique(subset(routes.long,select = c('Route')))))
 message('Total number of Stops: ',nrow(unique(subset(routes.long,select = c('Route','Stop')))))
 message('Total Stops / Total Routes: ',nrow(unique(subset(routes.long,
@@ -114,11 +72,8 @@ message('Total number of Ovenbird observations: ',
             sum(subset(routes.long,select = c('Route','Stop','Observations'))$Observations))
 message('Mean Ovenbird observations per stop: ',
             mean(subset(routes.long,select = c('Route','Stop','Observations'))$Observations))
-```
 
-The code block below will now show the same summary statistics, except this dataset was compiled from a query in Microsoft Access 2010:
-
-```{r}
+## ------------------------------------------------------------------------
 ## Import query results from text file
 routes2.wide <- read.csv('Routes_wide.txt')
 
@@ -143,4 +98,4 @@ message('Total number of Ovenbird observations: ',sum(subset(routes2.long,
         select = c('Route','Stop','Observations'))$Observations))
 message('Mean Ovenbird observations per stop: ',mean(subset(routes2.long,
         select = c('Route','Stop','Observations'))$Observations))
-```
+
