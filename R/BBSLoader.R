@@ -104,6 +104,22 @@ pullBBS<- function(year,country,region,AOU,useCache = F){
   routes.appended.3 <- cbind(routes.appended.2,temp.routeInfo)
   rm(routes.appended.2,temp.routeInfo,routes.Meta,routeInfo)
 
+  ## Convert covariates from factor to numeric
+  routes.appended.3$StartTemp <- as.numeric(routes.appended.3$StartTemp)
+  routes.appended.3$EndTemp <- as.numeric(routes.appended.3$EndTemp)
+  routes.appended.3$StartWind <- as.numeric(routes.appended.3$StartWind)
+  routes.appended.3$EndWind <- as.numeric(routes.appended.3$EndWind)
+  routes.appended.3$StartSky <- as.numeric(routes.appended.3$StartSky)
+  routes.appended.3$EndSky <- as.numeric(routes.appended.3$EndSky)
+
+  ## Convert Fahrenheit to celcius
+  idx.F <- match("f", tolower(as.character(routes.appended.3$TempScale)))
+  if(length(idx.F)>0){
+    routes.appended.3$StartTemp[idx.F] <- (routes.appended.3$StartTemp[idx.F] - 32)/1.8
+    routes.appended.3$EndTemp[idx.F] <- (routes.appended.3$EndTemp[idx.F] - 32)/1.8
+    routes.appended.3$TempScale[idx.F] <- 'c'
+  }
+
   message('Dataset is ready!!!')
   return(routes.appended.3)
 }
