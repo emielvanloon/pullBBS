@@ -6,17 +6,10 @@
 \usage{
 pullBBSRouteLocations(country, region, useCache = F)
 }
-\arguments{
-\item{country}{A BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.}
-
-\item{region}{A BBS region code representing a country or state.  Use the function pullBBSmeta to get a list of country and region codes.  Can be in the form of a list for selecting multiple regions.}
-
-\item{ignoreCache}{Set to TRUE to overwrite previously downloaded data.  This is usefull if a prevously cached file has been corrupted due to a download error.}
-}
-\value{
-A data.frame containing all the selected routes and their lat/long coordinates.
-}
 \description{
-Pull data from the North American Breeding Bird Survey ftp server
+country: A BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.
+region: A BBS region code representing a country or state.  Use the function pullBBSmeta to get a list of country and region codes.  Can be in the form of a list for selecting multiple regions.
+ignoreCache: Set to TRUE to overwrite previously downloaded data.  This is usefull if a prevously cached file has been corrupted due to a download error.
+returns a data.frame containing all the selected routes and their lat/long coordinates.
 }
 

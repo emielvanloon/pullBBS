@@ -9,13 +9,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-The following example will show you the typical workflow for downloading data from the North American Breeding Bird Survey ftp server.  First, we'll need to fingure out the relevant codes for our species and regions of interest.  In the following example, we'll download all overbird sightings in Alberta and Saskatchewan for the years 2011-2012.
+The following example will show you the typical workflow for downloading data from the North American Breeding Bird Survey ftp server.  First, we'll need to find the relevant codes for our species and regions of interest.  In the following examples, we'll download all data from multiple species from the United States and Canada in the years 2011-2013.
 
 ### Pull North American Breeding Bird Survey data
 
 Lets start by pulling the meta data to get the codes.  The `pullBBSmeta` function will create a folder in the current directory in which it'll save all the meta files.
 
-```{r,message=FALSE}
+```{r,message=FALSE,warning=F}
 require(pullBBS)
 pullBBSmeta()
 ```
@@ -24,123 +24,63 @@ Check the file `BBS_Meta\RegionCodes.txt` and `BBS_Meta\SpeciesList.txt` to find
 
 - Ovenbird: **06740**
 - Tennasee Warbler: **06470**
-- Canada: **124**
-- Alberta & Saskatchewan: **04** & **79**
+- Red-breasted Nuthatch: **07280**
+- Chipping Sparrow: **05600**
+- Canada, United States: **124**, **840**
+- BC, Alberta, Saskatchewan, Manitoba, Ontario: **11**, **04**, **79**, **45**, **68**
 
-Next, we'll use this to pull all the route info from the ftp server.
+Next, we'll use this to pull the route info from the ftp server.
 
-```{r,message=FALSE}
-routes <- pullBBS(year = c(2011,2012,2013),country = c(124),region = c(04,79),
-                  AOU = c(06740))
+```{r,message=FALSE,warning=FALSE}
+routes <- pullBBS(year = c(2011,2012,2013),country = c(124),region = c(11,04,79,45,68),
+                  AOU = c(06740,06470,07280),useCache = T)
+head(routes)
 ```
 
 As seen above, the BBS data is in a wide format, with each of the 50 stops holding a column in the table reporting the number of observations for that stop on a particular route.  To make the data easier to handle in R, we can condense the 50 stop columns into 2 columns: `Stop` and `Observations`.  The function `WideToLongBBS` will take care of this for us.
 
-```{r}
+```{r,warning=F,message=F}
 routes.long <- WideToLongBBS(routes = routes)
-str(routes.long)
-
-temp <- routes.long[,c('Route','year','AOU')]
-temp2 <- unique(temp)
-
-length(subset(temp2,AOU == 6470)[,1])
-length(subset(temp2,AOU == 6740)[,1])
-
-hist(temp$Route)
-
-
+head(routes.long)
 ```
 
-### Plot the averaged observed stop density
+### Plot the Summed Stop Observations per Route
 
-Now we can plot our BBS route locations in `leaflet`.  Here we'll plot the average number of Overbird sightings per stop on each route in addition to the number of years in which that route was sampled.  Each route in the BBS has a unique lat/long coordinate, and within each site there are 50 stops where the observer counts all audible species.  The resulting `mean observed density` is the average density from all the stops along a given route over all the surveyed years in the data set.  Ideally, each route is sampled once per year but many sites cannot be reaced on a yearly basis.
+Now we can plot our BBS route locations in `leaflet`.  Here we'll plot the summed sightings per route per species for a specified year.  Each route in the BBS has a unique lat/long coordinate and within each route there are 50 stops where the observer counts all audible species.  Ideally, each route is sampled once per year but many sites cannot be reached on a yearly basis.
 
-```{r,fig.width=7,fig.height=5}
-## Load packages for GIS
-require(leaflet)
-require(sp)
+On the following plot, you can examine each species by selecting the layer corresponding to its AOU code.
 
-## Calculate averaged stop observations per route
-stops.OVEN.average <- aggregate(x = routes.long$Observations,
-                 by = list(Lati = routes.long$Lati, Longi = routes.long$Longi), FUN = mean)
-
-## Count the number of stops per route and year (all route-years should have 50 stops)
-stops.OVEN.count <- aggregate(x = routes.long$Observations,
-                 by = list(year = routes.long$year, Lati = routes.long$Lati,
-                 Longi = routes.long$Longi), FUN = length)
-range(stops.OVEN.count$x)
-
-## Count number of years surveyed for each route
-stops.OVEN.surveyYears <- aggregate(x = stops.OVEN.count$x,
-                 by = list(Lati = stops.OVEN.count$Lati, Longi = stops.OVEN.count$Longi),
-                 FUN = length)
-
-## Create spatial points dataframe
-proj <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-route.mean.spdf <- SpatialPointsDataFrame(coords = stops.OVEN.average[,c('Longi','Lati')],
-                 data.frame(obs = stops.OVEN.average$x,years = stops.OVEN.surveyYears$x),
-                 proj4string = proj)
-
-## Plot results in Leaflet
-pal.1 <- colorNumeric(palette = c('#FF5555','#FFFF55','#55FF55'),route.mean.spdf@data$obs)
-pal.2 <- colorFactor(palette = c('#FF5555','#FFFF55','#55FF55'),route.mean.spdf@data$years)
-marker.rad <- 0.6 
-leaflet() %>% addTiles() %>%
-  addCircleMarkers(data = route.mean.spdf,fillColor = ~pal.1(obs),
-                   color = '#444444',stroke = T,fillOpacity = marker.rad,
-                   weight = 0.5,group = 'Observations',radius = 7) %>%
-  addLegend(position = 'topright',values = route.mean.spdf@data$obs,pal = pal.1,
-                   title = 'Mean Obs. Dens.') %>%
-  addCircleMarkers(data = route.mean.spdf,fillColor = ~pal.2(years),color = '#444444',
-                   stroke = T,fillOpacity = marker.rad,
-                   weight = 0.5,group = 'Sample Years',radius = 7) %>%
-  addLegend(position = 'topright',values = route.mean.spdf@data$years,pal = pal.2,
-                   title = 'Survey Years') %>%
-  addLayersControl(baseGroups = c("Observations", "Sample Years"))
+```{r,warning=FALSE,message=F,fig.width=7,fig.height=5}
+plotBBS(routes = routes.long,year = 2011,markerSize = 4)
 ```
 
-### Compare our dataset to a relational database query
+### Additiontal Examples
 
-To verify our dataset, we'll compare some summary statistics from our data set `routes.long` to the resulting statistics from a query in Microsoft Access 2010.
+We'll now plot all data for a given species accross the entire United States.  Regions (states or provinces) which have 0 sightings for the specified species will be automatically excluded from the data set by the `pullBBS` function.
 
-Here's the summaries for the data pulled from our package `pullBBS`:
+```{r,message=FALSE,warning=F}
+routes <- pullBBS(year = c(2011),country = c(840),
+                  AOU = c(06740,05600),useCache = T)
+routes.long <- WideToLongBBS(routes = routes)
+```
+
+```{r,warning=FALSE,message=F,fig.width=7,fig.height=5}
+plotBBS(routes = routes.long,markerSize = 2)
+```
+
+We can also pull data for all observed species within a specified region and period and then plot the first 8 species.  Setting `useCache` to `F` will wipe all temporary BBS files from your hard drive, so its usefull to set this only at the end of your workflow as having the cache will greatly speed up multiple calls to `pullBBS`.
+
+```{r,message=FALSE,warning=F}
+routes <- pullBBS(year = c(2011),country = c(124),
+                  region = 04, useCache = F)
+routes.long <- WideToLongBBS(routes = routes)
+```
 
 ```{r}
-message('Total number of routes: ',nrow(unique(subset(routes.long,select = c('Route')))))
-message('Total number of Stops: ',nrow(unique(subset(routes.long,select = c('Route','Stop')))))
-message('Total Stops / Total Routes: ',nrow(unique(subset(routes.long,
-            select = c('Route','Stop'))))/nrow(unique(subset(routes.long,select = c('Route')))))
-message('Total number of Ovenbird observations: ',
-            sum(subset(routes.long,select = c('Route','Stop','Observations'))$Observations))
-message('Mean Ovenbird observations per stop: ',
-            mean(subset(routes.long,select = c('Route','Stop','Observations'))$Observations))
+AOUs <-unique(routes.long$AOU)
+message(length(AOUs),' species found within this region.')
 ```
 
-The code block below will now show the same summary statistics, except this dataset was compiled from a query in Microsoft Access 2010:
-
-```{r}
-## Import query results from text file
-routes2.wide <- read.csv('Routes_wide.txt')
-
-## Convert from wide to long dataset
-require(tidyr)
-routes2.long <- gather(routes2.wide,Stop,Observations,Stop1:Stop50)
-
-## replace NA's with 0's
-idx <- which(is.na(routes2.long$Observations))
-routes2.long$Observations[idx] <- 0
-
-## Convert Stop Column to numeric
-routes2.long$Stop <- as.matrix(lapply(routes2.long$Stop,
-              FUN = function(x){return(as.numeric(substr(x,5,nchar(x))))}))
-
-message('Total number of routes: ',nrow(unique(subset(routes2.long,select = c('Route')))))
-message('Total number of Stops: ',nrow(unique(subset(routes2.long,select = c('Route',
-       'Stop')))))
-message('Total Stops / Total Routes: ',nrow(unique(subset(routes2.long,
-        select = c('Route','Stop'))))/nrow(unique(subset(routes2.long,select = c('Route')))))
-message('Total number of Ovenbird observations: ',sum(subset(routes2.long,
-        select = c('Route','Stop','Observations'))$Observations))
-message('Mean Ovenbird observations per stop: ',mean(subset(routes2.long,
-        select = c('Route','Stop','Observations'))$Observations))
+```{r,warning=FALSE,message=F,fig.width=7,fig.height=5}
+plotBBS(routes = routes.long,year = 2011,markerSize = 4,AOU = AOUs[1:8])
 ```
