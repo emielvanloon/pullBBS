@@ -9,13 +9,13 @@ pullBBS(year, country, region, AOU, useCache = F)
 \arguments{
 \item{year}{A vector containing a list of the years for the surveys}
 
-\item{country}{A BBS country code.  Use the function pullBBSmeta to get a list of country and region codes.}
+\item{country}{ISO country code for the region to pull observations from.  Use the function pullBBSmeta to get a list of country and region ISO codes.}
 
-\item{region}{A BBS region code representing a country or state.  Use the function pullBBSmeta to get a list of country and region codes.  Can be in the form of a list for selecting multiple regions.}
+\item{region}{A BBS region code representing a country or state.  Use the function pullBBSmeta to get a list of country and region codes.  Can be in the form of a list for selecting multiple regions.  If no region is specified, all regions within the country will be pulled.}
 
-\item{AOU}{AOU species code.  Use pullBBS meta to get a species list with codes.}
+\item{AOU}{Vector of AOU species codes to pull.  AOU = 0 will pull all species within the sepified region.  If no AOU codes are specified, all species observed within the regions for the given period will be pulled.}
 
-\item{useCache}{When set to TRUE, downloaded cached data will not be erased after the function is complete and in subsequent runs, data will be loaded taken from the cache instead of being downloaded.  This is usefull if you are running the function multiple times in a session and you don't want to redownload the BBS data on each run.}
+\item{useCache}{When set to TRUE, downloaded data will not be erased after the function is complete.  In subsequent runs, data will be loaded taken from the cache instead of being downloaded.  This is usefull if you are running the function multiple times in a session and you don't want to redownload the BBS data on each run.}
 }
 \value{
 A data.frame containing all the selected routes and observations for the specified species.
