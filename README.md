@@ -9,7 +9,8 @@ pullBBS is a R package designed to download and reorganize data from the [North 
 By executing the following code in R, you can install `pullBBS` using the `devtools` package.  Once installed, you can view the `Example_usage` vignette to see example workflows.
 
 ```r
-## Install devtools package for downloading pullBBS
+<<<<<<< HEAD
+## Install devtools package
 install.packages('devtools')
 require(devtools)
 
