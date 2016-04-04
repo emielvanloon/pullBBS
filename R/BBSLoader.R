@@ -98,7 +98,7 @@ pullBBS<- function(year,country,region,AOU,useCache = F){
   # idx holds the indexes of the matching vectors from the routes.appended table
 
   ## Create data.frame to be appended
-  temp.routeInfo <- routeInfo[idx,c('Lati','Longi','Stratum',"BCR","LandTypeID","RouteTypeID","RouteTypeDetailId")]
+  temp.routeInfo <- routeInfo[idx,c('Latitude','Longitude','Stratum',"BCR","LandTypeID","RouteTypeID","RouteTypeDetailId")]
 
   ## Append covariates
   routes.appended.3 <- cbind(routes.appended.2,temp.routeInfo)
