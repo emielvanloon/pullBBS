@@ -423,7 +423,7 @@ plotBBS <- function(routes,year,covariates,colorScheme = c('#FF5555','#FFFF55','
       temp <- subset(stops.summed,AOU == AOUs[i])
       observations <- SpatialPointsDataFrame(coords = temp[,c('Longi','Lati')],
                                               data.frame(obs = temp$x),
-                                              proj4string = proj)
+                                              proj4string = CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
       ## Update map object with new layer
       map <- addCircleMarkers(map,data = observations,
                               fillColor = ~pal.observations(obs),
