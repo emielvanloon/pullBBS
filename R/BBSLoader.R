@@ -407,7 +407,7 @@ plotBBS <- function(routes,year,covariates,colorScheme = c('#FF5555','#FFFF55','
   }
 
   ## Calculate summed stop observations per route per species
-  stops.summed <- aggregate(x = routes.long$Observations,
+  stops.summed <- aggregate(x = routes$Observations,
                             by = list(Lati = routes$Lati, Longi = routes$Longi, AOU = routes$AOU), FUN = sum)
 
   ## Create raster layers

@@ -33,7 +33,7 @@ Next, we'll use this to pull the route info from the ftp server.
 
 ```{r,message=FALSE,warning=FALSE}
 routes <- pullBBS(year = c(2011,2012,2013),country = c(124),region = c(11,04,79,45,68),
-                  AOU = c(06740,06470,07280),useCache = T)
+                  AOU = c(06740,06470,07280),useCache = F)
 head(routes)
 ```
 
